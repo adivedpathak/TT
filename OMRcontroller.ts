@@ -1,34 +1,30 @@
-import { Request, Response } from 'express';
-import OMR from '../models/OMR'; // Import the OMR model
+import { Request, Response } from "express";
+import OMRResultModel from "../models/OMRschema"; // Import the OMR Mongoose model
+import { IOMRResult } from "../models/OMRschema"; // Import the interface
 
-interface OMRResult {
-  omr_results: string;
-  success: boolean;
-  username: string;
-  userid: string;
-  assignment_id: string;
-  assignment_topic: string;
-  timestamp: string;
-}
-
+// ✅ Store OMR Results
 export const storeOMRResults = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { omr_results, success, username, userid, assignment_id, assignment_topic, timestamp }: OMRResult = req.body;
+    const { omr_results, success, username, userid, assignment_id, assignment_topic, timestamp } = req.body;
 
-    const omrResult = new OMR({
-      omrResults: omr_results,
+    // Convert `omr_results` from string to JSON object
+    const parsedOmrResults = typeof omr_results === "string" ? JSON.parse(omr_results) : omr_results;
+
+    const omrData: Partial<IOMRResult> = {
+      omr_results: parsedOmrResults,
       success,
       username,
-      userId: userid,
-      assignmentId: assignment_id,
-      assignmentTopic: assignment_topic,
-      timestamp
-    });
+      userid,
+      assignment_id,
+      assignment_topic,
+      timestamp: timestamp ? new Date(timestamp) : new Date(), // Use provided timestamp or default to current time
+    };
 
-    const result = await omrResult.save();
+    const newOMR = new OMRResultModel(omrData);
+    const result = await newOMR.save();
 
-    res.status(200).json({ message: 'OMR results stored successfully', result });
+    res.status(201).json({ message: "OMR results stored successfully", result });
   } catch (error: any) {
-    res.status(500).json({ message: 'Failed to store OMR results', error: (error as Error).message });
+    res.status(500).json({ message: "Failed to store OMR results", error: error.message });
   }
 };
